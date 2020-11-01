@@ -1,10 +1,22 @@
-baseurl = "https://example.com"
+baseurl = "https://josecarlos.me"
 languageCode = "es-ES"
 theme = "hugo-theme-stack"
 paginate = 5
-title = "José Carlos"
-disqusShortname = "hugo-theme-stack"            # Change it to your Disqus shortname before using
-DefaultContentLanguage = "es"                   # Theme i18n support
+title = "El blog de J. Carlos"
+disqusShortname = "el-blog-de-j-carlos"
+
+DefaultContentLanguage = "es"
+
+
+[languages]
+  [languages.es]
+    title = "El blog de J. Carlos"
+    languageName = "Español"
+    weight = 1
+  [languages.en]
+    title = "J. Carlos' blog"
+    languageName = "English"
+    weight = 2
 
 [permalinks]
     post = "/p/:slug/"
