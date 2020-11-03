@@ -1,11 +1,198 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-    <channel>
-        <title>El blog de J. Carlos</title>
-        <link>https://example.com/</link>
-        <description>Recent content on El blog de J. Carlos</description>
-        <generator>Hugo -- gohugo.io</generator>
-        <language>es-ES</language>
-        <lastBuildDate>Tue, 28 May 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://example.com/index.xml" rel="self" type="application/rss+xml" />
-    </channel>
-</rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>El blog de J. Carlos</title><link>https://josecarlos.me/</link><description>Recent content on El blog de J. Carlos</description><generator>Hugo -- gohugo.io</generator><language>es-ES</language><lastBuildDate>Sat, 10 Oct 2020 16:01:50 +0000</lastBuildDate><atom:link href="https://josecarlos.me/index.xml" rel="self" type="application/rss+xml"/><item><title>Varnish: ¿Cómo mantengo un sitio siempre online y evitos peticiones extras al backend?</title><link>https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/</link><pubDate>Sat, 10 Oct 2020 16:01:50 +0000</pubDate><guid>https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/</guid><description>&lt;img src="https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/covevr.jpeg" alt="Featured image of post Varnish: ¿Cómo mantengo un sitio siempre online y evitos peticiones extras al backend?" />&lt;h1 id="qué-es-varnish">¿Qué es Varnish?&lt;/h1>
+&lt;p>Varnish es un sistema de cache que se utiliza principalmente para cubrir las siguientes necesidades:&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>Cachear nuestros sitios webs para reducir la carga del backend.&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>Acelerar la carga de estáticos para cargarlo directamente en la RAM.&lt;/strong>&lt;/li>
+&lt;li>&amp;hellip;&lt;/li>
+&lt;/ol>
+&lt;p>Varnish tiene una documentación bastante completa que es pública para todo el mundo y podemos consultar directamente en:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://varnish-cache.org/docs/6.5/">https://varnish-cache.org/docs/6.5/&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>Una de las configuraciones más interesantes de Varnish &lt;strong>nos permite configurar cuanto tiempo debe de estar un objeto en la cache.&lt;/strong>&lt;/p>
+&lt;h2 id="configuración-en-varnish-de-tiempos-de-cache">Configuración en varnish de tiempos de cache&lt;/h2>
+&lt;p>En la &lt;a class="link" href="https://varnish-cache.org/docs/trunk/users-guide/vcl-built-in-subs.html#beresp-ttl-beresp-grace-beresp-keep" target="_blank" rel="noopener"
+>documentación de varnish&lt;/a> podemos encontrar como configurar los tiempos que se mantendrá un objeto en la cache.&lt;/p>
+&lt;p>En este caso, nos vamos a centrar en &lt;em>beresp.ttl&lt;/em> y &lt;em>beresp.grace&lt;/em>&lt;/p>
+&lt;h3 id="berespttl">beresp.ttl&lt;/h3>
+&lt;p>Esta configuración &lt;strong>nos permite configurar cuanto tiempo debe de estar un objeto en la cache&lt;/strong>. Cuando pase este tiempo, el objeto dejará de servirse desde la cache (Si no tenemos configurado &lt;em>beresp.grace&lt;/em>). Por ejemplo, si configuramos &lt;em>set beresp.ttl=1h&lt;/em>, cuando pase una hora, el fichero se volverá a pedir al backend.&lt;/p>
+&lt;h3 id="berespgrace">beresp.grace&lt;/h3>
+&lt;p>Esta configuración nos permite configurar un periodo de gracia que &lt;strong>nos permitirá seguir mostrando a los usuarios versiones caducadas de la cache, mientras que varnish consulta al backend por una versión actualizada.&lt;/strong>&lt;/p>
+&lt;h2 id="ventajas-de-usar-berespgrace">Ventajas de usar beresp.grace&lt;/h2>
+&lt;p>Una vez introducidas estas dos configuraciones, se van a mostrar dos ejemplos para que el lector entienda la necesidad del uso de &lt;em>beresp.grace&lt;/em>.&lt;/p>
+&lt;p>Supongamos que tenemos un fichero HTML fichero.html con un TTL de 1h y beresp.grace de 24h.&lt;/p>
+&lt;h3 id="ejemplo-1-mucho-tráfico">Ejemplo 1: Mucho tráfico&lt;/h3>
+&lt;ol>
+&lt;li>Supongamos que fichero.html &lt;strong>no se encuentra en la cache actualmente&lt;/strong>, y que un cliente accede a misitio.com/fichero.html, en este caso,** Varnish irá al backend y pedirá la versión más nueva de fichero.html**, y **la guardará en cache.**&lt;/li>
+&lt;li>Si &lt;strong>otro cliente accede en la próxima hora&lt;/strong> a misitio.com/fichero.html, &lt;strong>recibirá la versión de fichero.html que tiene varnish guardada en la cache.&lt;/strong>&lt;/li>
+&lt;li>Supongamos que cuando caduca el fichero de la cache, &lt;strong>entran 100 usuarios simultaneos en nuestro sitio web&lt;/strong>. Si no tenemos configurado el beresp.grace, a nuestro backend llegarían 100 peticiones, ya que la cache ha caducado. Sin embargo, si tenemos configurado el beresp.grace** los 100 clientes recibirán la versión que esta en cache de fichero.html**, y **seguidamente irá al backend y tratará de encontrar una versión actualizada de fichero.html**, pero en este caso, **sólo se hará una petición al backend**, ya que al estar dentro del período de gracia. **Cuando el backend responda a Varnish, Varnish guardará esta respuesta como la cache más nueva.**&lt;/li>
+&lt;li>Finalmente, cuando acceda un usuario nuevo, &lt;strong>Varnish mandará el nuevo fichero.html que ha guardado en la cache.&lt;/strong>&lt;/li>
+&lt;/ol>
+&lt;h3 id="ejemplo-2-sitio-online-247">Ejemplo 2: Sitio online 24/7&lt;/h3>
+&lt;ol>
+&lt;li>Supongamos que fichero.html &lt;strong>no se encuentra en la cache actualmente&lt;/strong>, y que un cliente accede a misitio.com/fichero.html, en este caso,** Varnish irá al backend y pedirá la versión más nueva de fichero.html**, y **la guardará en cache.**&lt;/li>
+&lt;li>&lt;strong>Supongamos que después de que se haya cargado en cache, se cae nuestro backend.&lt;/strong>&lt;/li>
+&lt;li>Debido a que &lt;strong>tenemos configurado un periodo de gracia de 24h&lt;/strong>, Varnish &lt;strong>mostrará la versión que tiene en cache durante 24h&lt;/strong>, y &lt;strong>tratará de actualizar&lt;/strong> la cache en segundo plano, &lt;strong>cuando el sitio esté disponible&lt;/strong>. &lt;strong>Los usuarios podrán seguir viendo la web online, ya que Varnish está sirviendola.&lt;/strong>&lt;/li>
+&lt;li>Supongamos que &lt;strong>el backend vuelve a estar activo a las 12h&lt;/strong>, Varnish se conectará al backend, y &lt;strong>automáticamente refrescará la cache con las versión actualizada de fichero.html&lt;/strong>&lt;/li>
+&lt;/ol></description></item><item><title>Inteligencia Artificial: #1 Introducción, rectas de regresión</title><link>https://josecarlos.me/p/ia-1-introduccion/</link><pubDate>Sun, 12 Apr 2020 20:53:49 +0000</pubDate><guid>https://josecarlos.me/p/ia-1-introduccion/</guid><description>&lt;img src="https://josecarlos.me/p/ia-1-introduccion/cover.jpeg" alt="Featured image of post Inteligencia Artificial: #1 Introducción, rectas de regresión" />&lt;p>Cuando nos hablan de inteligencia artificial, nos asustamos y pensamos en primera instancia que estos conocimientos están lejos de la mano de los mortales.&lt;/p>
+&lt;p>En estas entradas voy a tratar de introducir de manera intuitiva los conceptos básicos del &lt;em>machine learning&lt;/em> y presentar algunas implementaciones y aplicaciones, con el objetivo de aprender yo mismo, y que otra gente aprenda.&lt;/p>
+&lt;p>En este artículo tratamos uno de los modelos más básicos, la regresión lineal.&lt;/p>
+&lt;p>&lt;img src="https://images.unsplash.com/photo-1546188994-07c34f6e5e1b?ixlib=rb-1.2.1&amp;amp;q=80&amp;amp;fm=jpg&amp;amp;crop=entropy&amp;amp;cs=tinysrgb&amp;amp;w=2000&amp;amp;fit=max&amp;amp;ixid=eyJhcHBfaWQiOjExNzczfQ" alt="" />
+&lt;!-- raw HTML omitted -->Photo by &lt;!-- raw HTML omitted -->Drew Beamer&lt;!-- raw HTML omitted --> / &lt;!-- raw HTML omitted -->Unsplash&lt;!-- raw HTML omitted -->&lt;!-- raw HTML omitted -->&lt;/p>
+&lt;h1 id="predicciones-básicas">Predicciones básicas&lt;/h1>
+&lt;p>Supongamos que nos vamos a mudar a Boston, y &lt;strong>estamos observando la relación entre el número de habitaciones y el precio de las viviendas.&lt;/strong>&lt;/p>
+&lt;h2 id="recopilación-de-datos">Recopilación de datos&lt;/h2>
+&lt;p>Anotamos en una tabla los valores que hemos observado:&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Precio vivienda&lt;/th>
+&lt;th>Nº de habitaciones&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>24.0&lt;/td>
+&lt;td>6.575&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>21.6&lt;/td>
+&lt;td>6.421&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>34.7&lt;/td>
+&lt;td>7.185&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>33.4&lt;/td>
+&lt;td>6.998&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>36.2&lt;/td>
+&lt;td>7.147&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>28.7&lt;/td>
+&lt;td>6.43&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>22.9&lt;/td>
+&lt;td>6.012&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>27.1&lt;/td>
+&lt;td>6.172&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>16.5&lt;/td>
+&lt;td>5.631&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>18.9&lt;/td>
+&lt;td>6.004&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>Un primer acercamiento que podemos hacer es &lt;strong>dibujar una nube de puntos&lt;/strong> donde el eje de las X corresponda al número medio de habitaciones, y el eje de las Y corresponda al precio medio de la vivienda.&lt;/p>
+&lt;figure>
+&lt;img src="https://josecarlos.me/blog/content/images/2020/09/dataset-scatter-3.png"/>
+&lt;/figure>
+&lt;p>Una primera opción para resumir estos datos, es &lt;strong>dibujar una recta que pase cerca de todos los datos&lt;/strong>, pero, ¿Cómo podemos hacerlo? ¿Podemos tantear la solución?&lt;/p>
+&lt;!-- raw HTML omitted -->
+&lt;p>Parece que &lt;strong>tratar de solucionar este problema por tanteo, no es factible&lt;/strong>, tratemos de buscar una solución aplicando las matemáticas.&lt;/p>
+&lt;h2 id="recta-de-regresión-lineal">Recta de regresión lineal&lt;/h2>
+&lt;p>Queremos calcular una recta que minimice los errores entre todos los puntos
+&lt;img src="https://josecarlos.me/blog/content/images/2020/09/dataset-scatter-error-1.png" alt="dataset-scatter-error-1" />&lt;/p>
+&lt;p>Si calculamos la media de estos errores y los elevamos al cuadrado, obtenemos lo que se denomina &lt;strong>error cuadrático medio&lt;/strong>, y la recta que cumple esta propiedad se denomina &lt;strong>recta de regresión lineal&lt;/strong>.&lt;/p>
+&lt;h3 id="fórmulas-para-el-cálculo-de-hiperplanos-de-regresión">Fórmulas para el cálculo de hiperplanos de regresión&lt;/h3>
+&lt;p>Si $X$ es la matriz de variables con una columna de $1$ en la primera columna, e $Y$ son los datos que tenemos y queremos predecir. Si observamos el caso de las viviendas en Boston, la matrix $X$ tendría dos columnas, una sólo con 1, y otra con la media de número de habitaciones, por otro lado, la $Y$ serían los precios de las viviendas.&lt;/p>
+&lt;p>Entonces, el hiperplano $Y_e=\beta X$ (O recta en $\mathbb{R}^2$) tiene las siguientes componentes:
+$$ \beta = (X^T X)^{-1} X^T Y $$&lt;/p>
+&lt;p>Dado que la primera columna de $X$ está compuesta por 1, el hiperplano vendrá definido por:
+$$
+Y_e = \beta_1 X + \beta_0
+$$
+Donde $\beta_i$ son las componentes del vector $\beta$&lt;/p>
+&lt;h3 id="prediciendo-valores">Prediciendo valores&lt;/h3>
+&lt;p>Si volvemos a nuestro caso especifico, vamos a calcular los valores $\beta$ y $\alpha$.&lt;/p>
+&lt;p>Nuestra matrices $X$ e $Y$, vienen definidas de la siguiente forma:&lt;/p>
+&lt;p>$$
+X=\left(\begin{matrix}
+1 &amp;amp; 6.575 \&lt;br>
+1 &amp;amp; 6.421 \&lt;br>
+1 &amp;amp; 7.185 \&lt;br>
+1 &amp;amp; 6.998 \&lt;br>
+1 &amp;amp; 7.147 \&lt;br>
+1 &amp;amp; 6.43 \&lt;br>
+1 &amp;amp; 6.012 \&lt;br>
+1 &amp;amp; 6.172 \&lt;br>
+1 &amp;amp; 5.631 \&lt;br>
+1 &amp;amp; 6.004
+\end{matrix}\right), Y=\left(\begin{matrix}
+24.0 \&lt;br>
+21.6 \&lt;br>
+34.7 \&lt;br>
+33.4 \&lt;br>
+36.2 \&lt;br>
+28.7 \&lt;br>
+22.9 \&lt;br>
+27.1 \&lt;br>
+16.5 \&lt;br>
+18.9
+\end{matrix}\right)
+$$&lt;/p>
+&lt;p>Por tanto,
+$$\beta=(-49.98256497, 11.82850406)$$
+De donde,
+$$
+y_e=x b_1 + b_0
+$$&lt;/p>
+&lt;p>Podemos pintar la recta con los gráficos para ver como se ajusta la recta:
+&lt;img src="https://josecarlos.me/blog/content/images/2020/04/descarga.png" alt="descarga" />&lt;/p>
+&lt;p>Supongamos ahora, que queremos calcular el precio estimado de una vivienda de 8 habitaciones, ahora simplemente deberíamos sustiuir en nuestra recta otros valores, y tendríamos:
+$$
+y_e = 8 \beta_1 + \beta_0 = 44
+$$&lt;/p>
+&lt;p>Por lo cual, predecimos que valor de una vivienda de 8 habitaciones, tendrá un precio aproximadamente de 44k$&lt;/p>
+&lt;p>&lt;img src="https://images.unsplash.com/photo-1451153378752-16ef2b36ad05?ixlib=rb-1.2.1&amp;amp;q=80&amp;amp;fm=jpg&amp;amp;crop=entropy&amp;amp;cs=tinysrgb&amp;amp;w=2000&amp;amp;fit=max&amp;amp;ixid=eyJhcHBfaWQiOjExNzczfQ" alt="Colorful building corner" />
+&lt;!-- raw HTML omitted -->Photo by &lt;!-- raw HTML omitted -->Hernan Lucio&lt;!-- raw HTML omitted --> / &lt;!-- raw HTML omitted -->Unsplash&lt;!-- raw HTML omitted -->&lt;!-- raw HTML omitted -->&lt;/p>
+&lt;h2 id="cálculo-de-recta-de-regresión-lineal-python">Cálculo de recta de regresión lineal Python&lt;/h2>
+&lt;p>Para este ejemplo utilizaremos la librería de cálculo científico &lt;strong>numpy&lt;/strong>, se puede encontrar el ejemplo aquí:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://colab.research.google.com/drive/1tNfC--BjaaOIPSGJbSMSKJcYG3ySS_hV" target="_blank" rel="noopener"
+>Ejemplo básico con Numpy&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://scikit-learn.org/stable/auto_examples/linear_model/plot_ols.html" target="_blank" rel="noopener"
+>Usando funciones ya existentes para calcular la recta de regresión&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;h2 id="limitaciones">Limitaciones&lt;/h2>
+&lt;p>En el ejemplo específico de los precios de las viviendas en Boston según el número de habitaciones, se puede observar que los datos están más o menos cercanos a la recta de regresión que hemos calculado, y que la nube de puntos se &amp;ldquo;asemeja&amp;rdquo; a una recta. Sin embargo, esto no es siempre así. Podría ocurrir que nuestros datos estén sumamente dispersos, y que nos fuese imposible encontrar una recta de regresión donde el error mínimo sea demasiado grande.&lt;/p>
+&lt;p>Es por eso, que se verán otros modelos más complejos que tratan de solucionar esto.&lt;/p>
+&lt;h1 id="aplicaciones">Aplicaciones&lt;/h1>
+&lt;p>Como hemos observado, estos modelos son muy básicos y presentan limitaciones, sin embargo son bastante potentes en ciertas situaciones para predecir comportamientos.&lt;/p>
+&lt;p>Por ejemplo, podemos usar este modelo para predecir métricas en bases de datos temporales como &lt;a class="link" href="https://prometheus.io/" target="_blank" rel="noopener"
+>Prometheus&lt;/a>&lt;/p>
+&lt;h2 id="prediciendo-el-futuro-con-prometheus">Prediciendo el futuro con Prometheus&lt;/h2>
+&lt;p>Prometheus incluye dos funciones interesante en este sentido &lt;a class="link" href="https://prometheus.io/docs/prometheus/latest/querying/functions/#predict_linear" target="_blank" rel="noopener"
+>&lt;strong>predict_linear&lt;/strong>&lt;/a> que predice el valor de una serie temporal en el futuro usando regresión lineal.&lt;/p>
+&lt;p>Esta función nos puede servir para tantear el valor que tendrá una métrica en el futuro. Por ejemplo, si tenemos una métrica que cuenta la cantidad de usuarios conectados durante una campaña, podremos saber cuantos usuarios habrá dentro de un periodo de tiempo.&lt;/p>
+&lt;p>Por otro lado, tenemos la función &lt;a class="link" href="https://prometheus.io/docs/prometheus/latest/querying/functions/#deriv" target="_blank" rel="noopener"
+>&lt;strong>deriv&lt;/strong>&lt;/a>, que nos devuelve la pendiente de la recta de regresión lineal.&lt;/p>
+&lt;p>Esta pendiente nos permite calcular la velocidad con la que se está moviendo nuestra serie temporal y hacia que dirección. Por ejemplo, si tenemos una métrica que cubre el porcentaje de disco duro libre, y hacemos su derivada en los últimos 30 minutos, y nos da un valor negativo, podremos saber que se están escribiendo ficheros en el disco, además, dado que la pendiente de la recta modela la velocidad de crecimiento (o decrecimiento) de nuestros datos, podremos sacar conclusiones de cuando pasará algo.
+&lt;img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&amp;amp;q=80&amp;amp;fm=jpg&amp;amp;crop=entropy&amp;amp;cs=tinysrgb&amp;amp;w=2000&amp;amp;fit=max&amp;amp;ixid=eyJhcHBfaWQiOjExNzczfQ" alt="Speedcurve Performance Analytics" />
+&lt;!-- raw HTML omitted -->Photo by &lt;!-- raw HTML omitted -->Luke Chesser&lt;!-- raw HTML omitted --> / &lt;!-- raw HTML omitted -->Unsplash&lt;!-- raw HTML omitted -->&lt;!-- raw HTML omitted -->&lt;/p>
+&lt;h1 id="fuente--enlaces-de-interés">Fuente / Enlaces de interés&lt;/h1>
+&lt;p>&lt;a class="link" href="https://en.wikipedia.org/wiki/Linear_regression" target="_blank" rel="noopener"
+>https://en.wikipedia.org/wiki/Linear_regression&lt;/a>&lt;/p>
+&lt;p>&lt;a class="link" href="https://docs.scipy.org/doc/numpy/reference/routines.linalg.html" target="_blank" rel="noopener"
+>https://docs.scipy.org/doc/numpy/reference/routines.linalg.html&lt;/a>&lt;/p>
+&lt;p>&lt;a class="link" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank" rel="noopener"
+>https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html&lt;/a>&lt;/p>
+&lt;p>&lt;a class="link" href="https://docs.scipy.org/doc/numpy/index.html" target="_blank" rel="noopener"
+>https://docs.scipy.org/doc/numpy/index.html&lt;/a>&lt;/p>
+&lt;p>&lt;a class="link" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_boston.html" target="_blank" rel="noopener"
+>https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_boston.html&lt;/a>&lt;/p>
+&lt;!-- raw HTML omitted -->
+&lt;!-- raw HTML omitted -->
+&lt;!-- raw HTML omitted -->
+&lt;script src="https://polyfill.io/v3/polyfill.min.js?features=es6">&lt;/script>
+&lt;script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">&lt;/script></description></item></channel></rss>

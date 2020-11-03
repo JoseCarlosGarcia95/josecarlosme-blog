@@ -1,10 +1,1 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Tags on El blog de J. Carlos</title>
-    <link>https://example.com/tags/</link>
-    <description>Recent content in Tags on El blog de J. Carlos</description>
-    <generator>Hugo -- gohugo.io</generator>
-    <language>es-ES</language><atom:link href="https://example.com/tags/index.xml" rel="self" type="application/rss+xml" />
-  </channel>
-</rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Tags on El blog de J. Carlos</title><link>https://josecarlos.me/tags/</link><description>Recent content in Tags on El blog de J. Carlos</description><generator>Hugo -- gohugo.io</generator><language>es-ES</language><lastBuildDate>Sat, 10 Oct 2020 16:01:50 +0000</lastBuildDate><atom:link href="https://josecarlos.me/tags/index.xml" rel="self" type="application/rss+xml"/><item><title>ops</title><link>https://josecarlos.me/tags/ops/</link><pubDate>Sat, 10 Oct 2020 16:01:50 +0000</pubDate><guid>https://josecarlos.me/tags/ops/</guid><description/></item><item><title>performance</title><link>https://josecarlos.me/tags/performance/</link><pubDate>Sat, 10 Oct 2020 16:01:50 +0000</pubDate><guid>https://josecarlos.me/tags/performance/</guid><description/></item><item><title>varnish</title><link>https://josecarlos.me/tags/varnish/</link><pubDate>Sat, 10 Oct 2020 16:01:50 +0000</pubDate><guid>https://josecarlos.me/tags/varnish/</guid><description/></item><item><title>ia</title><link>https://josecarlos.me/tags/ia/</link><pubDate>Sun, 12 Apr 2020 20:53:49 +0000</pubDate><guid>https://josecarlos.me/tags/ia/</guid><description/></item><item><title>python</title><link>https://josecarlos.me/tags/python/</link><pubDate>Sun, 12 Apr 2020 20:53:49 +0000</pubDate><guid>https://josecarlos.me/tags/python/</guid><description/></item><item><title>tensorflow</title><link>https://josecarlos.me/tags/tensorflow/</link><pubDate>Sun, 12 Apr 2020 20:53:49 +0000</pubDate><guid>https://josecarlos.me/tags/tensorflow/</guid><description/></item></channel></rss>
