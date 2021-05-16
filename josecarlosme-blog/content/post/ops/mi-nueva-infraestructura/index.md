@@ -1,6 +1,6 @@
 +++
 author = "José Carlos García"
-date = 2021-02-27T10:00:50Z
+date = 2021-02-26T10:00:50Z
 description = ""
 draft = false
 image = "cover.jpeg"

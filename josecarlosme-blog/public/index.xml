@@ -1,4 +1,322 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>El blog de J. Carlos</title><link>https://josecarlos.me/</link><description>Recent content on El blog de J. Carlos</description><generator>Hugo -- gohugo.io</generator><language>es-ES</language><lastBuildDate>Sat, 10 Oct 2020 16:01:50 +0000</lastBuildDate><atom:link href="https://josecarlos.me/index.xml" rel="self" type="application/rss+xml"/><item><title>Varnish: ¿Cómo mantengo un sitio siempre online y evitos peticiones extras al backend?</title><link>https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/</link><pubDate>Sat, 10 Oct 2020 16:01:50 +0000</pubDate><guid>https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/</guid><description>&lt;img src="https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/covevr.jpeg" alt="Featured image of post Varnish: ¿Cómo mantengo un sitio siempre online y evitos peticiones extras al backend?" />&lt;h1 id="qué-es-varnish">¿Qué es Varnish?&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>El blog de J. Carlos</title><link>https://josecarlos.me/</link><description>Recent content on El blog de J. Carlos</description><generator>Hugo -- gohugo.io</generator><language>es-ES</language><lastBuildDate>Fri, 26 Feb 2021 10:00:50 +0000</lastBuildDate><atom:link href="https://josecarlos.me/index.xml" rel="self" type="application/rss+xml"/><item><title>Mi nueva infraestructura. Proxmox + Private Network + Terraform + VPN + Kubernetes (Rancher)</title><link>https://josecarlos.me/p/mi-nueva-infraestructura/</link><pubDate>Fri, 26 Feb 2021 10:00:50 +0000</pubDate><guid>https://josecarlos.me/p/mi-nueva-infraestructura/</guid><description>&lt;img src="https://josecarlos.me/p/mi-nueva-infraestructura/cover.jpeg" alt="Featured image of post Mi nueva infraestructura. Proxmox + Private Network + Terraform + VPN + Kubernetes (Rancher)" />&lt;p>Hasta el momento, tenía contratado 4 VPS con una capacidad bastante limitada dónde he desplegado mis dos principales proyectos personales, tungsteno.app y josecarlos.me.
+En estos servidores virtuales tenía desplegado un clúster de Kubernetes con un total de 4vCPU y 8GB de RAM.&lt;/p>
+&lt;p>En las últimas semanas, he estado atento a las ofertas de servidores dedicados de &lt;a class="link" href="https://www.kimsufi.com/es/" target="_blank" rel="noopener"
+>Kimsufi&lt;/a>, una empresa que alquila servidores dedicados antiguos a un precio reducido, y he conseguido contratar el servidor KS-11, por tanto, ahora tengo una CPU de 8 hilos y 16 GB de RAM, y aunque es lento, también dispongo de 2TB de disco HDD. Estas condiciones me ayudaron a decidirme a montar un Proxmox, con distintas máquinas virtuales montadas con Terraform, una red privada, un entorno propio de laboratorio y muchas otras opciones para probar.&lt;/p>
+&lt;div class="toc">
+&lt;h1>Tabla de contenido&lt;/h1>
+&lt;nav id="TableOfContents">
+&lt;ul>
+&lt;li>&lt;a href="#proxmox">Proxmox&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#instalación">Instalación&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#configurando-una-red-privada-para-todas-las-máquinas-virtuales">Configurando una red privada para todas las máquinas virtuales&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#creando-template-con-debian-10-proxmox">Creando template con Debian 10 Proxmox.&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#creando-máquinas-con-terraform">Creando máquinas con Terraform.&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#vpn-wireguard-acceder-desde-fuera-a-la-red-virtual">VPN (Wireguard): Acceder desde fuera a la red virtual.&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#otras-máquinas-necesarias">Otras máquinas necesarias&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#kubernetes-fácilmente-rancher">Kubernetes fácilmente: Rancher&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#instalando-rancher">Instalando Rancher&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#creando-un-nuevo-clúster-de-kubernetes">Creando un nuevo clúster de Kubernetes.&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#primeras-configuraciones">Primeras configuraciones&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#desplegando-mis-aplicaciones">Desplegando mis aplicaciones&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#conclusiones">Conclusiones&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/nav>
+&lt;hr>
+&lt;/div>
+&lt;h2 id="proxmox">Proxmox&lt;/h2>
+&lt;p>Proxmox Virtual Environment, o Proxmox VE, entorno de virtualización de servidores de código abierto. Está en distribuciones GNU/Linux basadas en Debian con una versión modificada del Kernel RHEL y permite el despliegue y la gestión de máquinas virtuales y contenedores. Proxmox VE incluye una consola Web y herramientas de línea de comandos, y proporciona una API REST para herramientas de terceros. Dos tipos de virtualización son compatibles: los contenedores basados con LXC (a partir de la versión 4.0 reemplaza OpenVZ, utilizado en la versión 3.4, incluido3​), y la virtualización con KVM. Viene con un instalador e incluye un sitio Web basado en la interfaz de administración.&lt;/p>
+&lt;h3 id="instalación">Instalación&lt;/h3>
+&lt;p>Desde Kimsufi, o OVH tienes la posibilidad de instalar directamente un dedicado con la imagen de Proxmox. Si tienes otro proveedor, que no ofrece la opción de instalarlo desde las opciones de &amp;ldquo;despliegue&amp;rdquo;, siempre puedes ver las &lt;a class="link" href="https://pve.proxmox.com/wiki/Category:Installation" target="_blank" rel="noopener"
+>guías de instalación en la Wiki de Proxmox&lt;/a>.&lt;/p>
+&lt;h3 id="configurando-una-red-privada-para-todas-las-máquinas-virtuales">Configurando una red privada para todas las máquinas virtuales&lt;/h3>
+&lt;p>En mi proveedor del dedicado, sólo ofrecen la posibilidad de tener una IP pública por dedicado, así que he tenido que configurar una red privada, y con configuraciones de port forwarding para redirigir desde la IP pública, a las distintas máquinas virtuales según el puerto.&lt;/p>
+&lt;p>Por defecto, mi servidor dedicado venía con estas interfaces de red:&lt;/p>
+&lt;pre>&lt;code>root@xxxx:~# ip a
+1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+inet 127.0.0.1/8 scope host lo
+valid_lft forever preferred_lft forever
+inet6 ::1/128 scope host
+valid_lft forever preferred_lft forever
+2: enp1s0: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu 1500 qdisc pfifo_fast master vmbr0 state UP group default qlen 1000
+link/ether 00:25:90:76:dd:00 brd ff:ff:ff:ff:ff:ff
+3: enp2s0: &amp;lt;BROADCAST,MULTICAST&amp;gt; mtu 1500 qdisc noop state DOWN group default qlen 1000
+link/ether 00:25:90:76:dd:01 brd ff:ff:ff:ff:ff:ff
+4: vmbr0: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu 1500 qdisc noqueue state UP group default qlen 1000
+link/ether 00:25:90:76:dd:00 brd ff:ff:ff:ff:ff:ff
+inet &amp;lt;ip publica&amp;gt;/24 brd &amp;lt;gateway&amp;gt;.255 scope global dynamic vmbr0
+valid_lft 81716sec preferred_lft 81716sec
+inet6 &amp;lt;ip publica&amp;gt;/64 scope link
+valid_lft forever preferred_lft forever
+&lt;/code>&lt;/pre>
+&lt;p>Con la siguiente configuración:&lt;/p>
+&lt;pre>&lt;code>auto lo
+iface lo inet loopback
+iface enp1s0 inet manual
+iface enp2s0 inet manual
+auto vmbr0
+iface vmbr0 inet dhcp
+bridge-ports enp1s0
+bridge-stp off
+bridge-fd 0
+auto vmbr1
+&lt;/code>&lt;/pre>
+&lt;p>Nuestro objetivo es crear un puente virtual en nuestro dedicado, dónde desplegaremos las IPs de nuestras máquinas virtuales. Para ello, editamos el fichero &lt;code>/etc/network/interfaces&lt;/code>, y añadimos al final:&lt;/p>
+&lt;pre>&lt;code>auto vmbr1 # Nombre de la interfaz
+iface vmbr1 inet static
+address 10.10.10.1/24 # IP dentro de esta interfaz.
+bridge-ports none
+bridge-stp off
+bridge-fd 0
+post-up echo 1 &amp;gt; /proc/sys/net/ipv4/ip_forward # Permite hacer port-forwarding para mandar puertos a VM.
+post-up iptables -t nat -A PREROUTING -i vmbr0 -p udp --dport 51820 -j DNAT --to 10.10.10.3:51820 # Ejemplo de mandar puerto 51820 UDP a VM.
+post-down iptables -t nat -D PREROUTING -i vmbr0 -p udp --dport 51820 -j DNAT --to 10.10.10.3:51820
+post-up iptables -t nat -A POSTROUTING -s '10.10.10.0/24' -o vmbr0 -j MASQUERADE # Permite acceder a la red accediendo desde vmbr0
+post-down iptables -t nat -D POSTROUTING -s '10.10.10.0/24' -o vmbr0 -j MASQUERADE
+post-up iptables -t nat -A POSTROUTING -s '10.10.11.0/24' -o vmbr0 -j MASQUERADE # Para la VPN
+post-down iptables -t nat -D POSTROUTING -s '10.10.11.0/24' -o vmbr0 -j MASQUERADE
+post-up iptables -t nat -A PREROUTING -i vmbr0 -p tcp -m tcp --dport 80 -j DNAT --to-destination 10.10.10.4:80 # Manda el tráfico del 80 al balanceador de carga
+post-up iptables -t nat -A PREROUTING -i vmbr0 -p tcp -m tcp --dport 443 -j DNAT --to-destination 10.10.10.4:443 # Manda el tráfico del 443 al balanceador de carga.
+&lt;/code>&lt;/pre>
+&lt;p>Finalmente, ejecutamos &lt;code>service networking restart&lt;/code> y tendremos una red virtual privada creada para nuestras máquinas virtuales.&lt;/p>
+&lt;h3 id="creando-template-con-debian-10-proxmox">Creando template con Debian 10 Proxmox.&lt;/h3>
+&lt;p>Ejecutamos el siguiente script para crear un template con Debian 10 con soporte para Cloud Init:&lt;/p>
+&lt;pre>&lt;code>wget https://cdimage.debian.org/cdimage/openstack/current/debian-10-openstack-amd64.qcow2
+# Create a VM
+qm create 9110 --name debian10-cloud --memory 2048 --net0 virtio,bridge=vmbr1
+# Import the disk in qcow2 format (as unused disk)
+qm importdisk 9110 debian-10-openstack-amd64.qcow2 local -format qcow2
+# Attach the disk to the vm using VirtIO SCSI
+qm set 9110 --scsihw virtio-scsi-pci --scsi0 /var/lib/vz/images/9110/vm-9110-disk-0.qcow2
+# Important settings
+qm set 9110 --ide2 local:cloudinit --boot c --bootdisk scsi0 --serial0 socket --vga serial0
+# The initial disk is only 2GB, thus we make it larger
+qm resize 9110 scsi0 +30G
+# Using a dhcp server on vmbr1 or use static IP
+qm set 9110 --ipconfig0 ip=10.10.10.2/24,gw=10.10.10.1
+# user authentication for 'debian' user (optional password)
+qm set 9110 --sshkey ~/.ssh/id_rsa.pub
+# check the cloud-init config
+qm cloudinit dump 9110 user
+# create tempalte and a linked clone
+qm template 9110
+&lt;/code>&lt;/pre>
+&lt;p>En este punto, tendremos un template con Debian 10, listo para ser clonado en nuestras nuevas máquinas virtuales.&lt;/p>
+&lt;h3 id="creando-máquinas-con-terraform">Creando máquinas con Terraform.&lt;/h3>
+&lt;p>En la carpeta donde vayamos a escribir los ficheros de Terraform, creamos un fichero &lt;code>versions.tf&lt;/code> con el siguiente contenido:&lt;/p>
+&lt;pre>&lt;code>terraform {
+required_providers {
+proxmox = {
+source = &amp;quot;Telmate/Proxmox&amp;quot;
+version = &amp;quot;&amp;gt;=1.0.0&amp;quot;
+}
+}
+required_version = &amp;quot;&amp;gt;= 0.13&amp;quot;
+}
+&lt;/code>&lt;/pre>
+&lt;p>Este fichero, le dirá a Terraform que plugins usar, a continuación creamos el fichero &lt;code>main.tf&lt;/code>:&lt;/p>
+&lt;pre>&lt;code>provider &amp;quot;proxmox&amp;quot; {
+pm_api_url = &amp;quot;https://&amp;lt;ip publica&amp;gt;:8006/api2/json&amp;quot;
+pm_user = &amp;quot;root@pam&amp;quot;
+pm_tls_insecure = true
+}
+&lt;/code>&lt;/pre>
+&lt;p>Este bloque, te permitirá conectarte a tu Proxmox, para generar máquinas fácilmente. Ejecutamos &lt;code>terraform init&lt;/code> y ya podremos empezar a trabajar.&lt;/p>
+&lt;h3 id="vpn-wireguard-acceder-desde-fuera-a-la-red-virtual">VPN (Wireguard): Acceder desde fuera a la red virtual.&lt;/h3>
+&lt;p>Configuración Terraform:
+resource &amp;ldquo;proxmox_vm_qemu&amp;rdquo; &amp;ldquo;vpn&amp;rdquo; {
+name = &amp;ldquo;vpn&amp;rdquo;&lt;/p>
+&lt;pre>&lt;code> target_node = &amp;quot;xxxx&amp;quot;
+os_type = &amp;quot;cloud-init&amp;quot;
+clone = &amp;quot;debian10-cloud&amp;quot;
+memory = 512
+cores = &amp;quot;1&amp;quot;
+sshkeys = &amp;quot;&amp;lt;tu clave SSH&amp;gt;&amp;quot;
+ipconfig0 = &amp;quot;ip=10.10.10.3/32,gw=10.10.10.1&amp;quot; # Aquí configuramos la IP privada de nuestra VM
+bootdisk = &amp;quot;scsi0&amp;quot;
+disk {
+type = &amp;quot;scsi&amp;quot;
+storage = &amp;quot;local&amp;quot;
+size = &amp;quot;35G&amp;quot;
+}
+lifecycle {
+ignore_changes = [
+network,
+]
+}
+}
+&lt;/code>&lt;/pre>
+&lt;p>Ejecutamos &lt;code>terraform apply&lt;/code> para que cree la máquina, y una vez que se haya creado la máquina, entraremos para instalar y configurar wireguard:&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>Ejecutamos &lt;code>sudo apt update&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Ejecutamos &lt;code>sudo apt upgrade&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Activamos el repositorio de backports, que es donde se aloja wireguard: &lt;code>sudo sh -c &amp;quot;echo 'deb http://deb.debian.org/debian buster-backports main contrib non-free' &amp;gt; /etc/apt/sources.list.d/buster-backports.list&amp;quot;&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Volvemos a actualizar nuestros repositorios: &lt;code>sudo apt update&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Instalamos wireguard: &lt;code>sudo apt install wireguard&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Entramos en &lt;code>/etc/wireguard/&lt;/code>; &lt;code>cd /etc/wireguard/&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Generamos las claves privadas y públicas del servidor: &lt;code>umask 077; wg genkey | tee privatekey | wg pubkey &amp;gt; publickey&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Creamos el fichero wg0.conf:&lt;/p>
+&lt;pre>&lt;code> [Interface]
+Address = 10.10.11.1/24 # IP de los clientes y servidor de la VPN
+ListenPort = 51820
+PrivateKey = &amp;lt;contenido fichero /etc/wireguard/privatekey&amp;gt;
+PostUp = iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT # Permitimos a los clientes acceder a la red privada.
+&lt;/code>&lt;/pre>
+&lt;/li>
+&lt;li>
+&lt;p>En nuestro ordenador local instalamos wireguard, y accedemos a &lt;code>/etc/wireguard/&lt;/code> y seguidamente, ejecutamos &lt;code>umask 077; wg genkey | tee privatekey | wg pubkey &amp;gt; publickey&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Volvemos, al servidor y copiamos la clave pública del cliente, y creamos un peer de wireguard:&lt;/p>
+&lt;pre>&lt;code>[Peer]
+PublicKey = &amp;lt;Clave pública del cliente&amp;gt;
+AllowedIPs = 10.10.11.2/24 # IP del cliente
+&lt;/code>&lt;/pre>
+&lt;/li>
+&lt;li>
+&lt;p>Iniciamos wireguard en la máquina virtual: &lt;code>systemctl enable wg-quick@wg0 --now&lt;/code>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>En nuestro ordenador local, terminamos de configurar wireguard, creamos el fichero &lt;code>/etc/wireguard/wg0.conf&lt;/code>&lt;/p>
+&lt;pre>&lt;code>[Interface]
+Address = 10.10.11.2/24 # IP del cliente
+DNS = 8.8.8.8
+PrivateKey = &amp;lt;Private key de nuestra máquina&amp;gt;
+[Peer]
+PublicKey = &amp;lt;Public key del servidor&amp;gt;
+AllowedIPs = 10.10.10.0/24 # IPs que van a pasar por la VPN, en nuestro caso 10.10.10.0/24 porque son las de vmbr1
+Endpoint = &amp;lt;ip publica servidor&amp;gt;:51820
+PersistentKeepalive = 25
+&lt;/code>&lt;/pre>
+&lt;/li>
+&lt;li>
+&lt;p>Iniciamos en local la VPN: &lt;code>systemctl enable wg-quick@wg0 --now&lt;/code>&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h3 id="otras-máquinas-necesarias">Otras máquinas necesarias&lt;/h3>
+&lt;p>Se crearán 4 máquinas virtuales más:&lt;/p>
+&lt;ol>
+&lt;li>Balancer, una máquina con debian 10 con la IP 10.10.10.4, que será un worker de de Kubernetes donde ejecutaremos simplemente el NGINX Ingress (1GB de RAM | 1 CPU)&lt;/li>
+&lt;li>2 rancher-nodes, donde desplegaremos etcd, controlplane y los pods del clúster. (2GB de RAM | 2 CPU)&lt;/li>
+&lt;li>Rancher, panel de administración de K8s. (2GB de RAM | 1 CPU)&lt;/li>
+&lt;/ol>
+&lt;h2 id="kubernetes-fácilmente-rancher">Kubernetes fácilmente: Rancher&lt;/h2>
+&lt;h3 id="instalando-rancher">Instalando Rancher&lt;/h3>
+&lt;p>Rancher puede instalarse directamente en un clúster existente de Kubernetes, podemos desplegarlo dentro de K3s, o simplemente ejecutarlo desde docker. En un entorno de producción &lt;strong>no es recomendable&lt;/strong> instalar rancher directamente desde docker, aún así, para mi caso, que no es un entorno crítico, lo instalaré directamente en docker para ahorrarme recursos:&lt;/p>
+&lt;ol>
+&lt;li>Creamos la máquina para rancher, que tendrá la IP 10.10.10.5&lt;/li>
+&lt;li>Instalamos docker, &lt;code>sudo apt update; sudo apt install docker.io&lt;/code>&lt;/li>
+&lt;li>Ejecutamos e instalamos rancher: &lt;code>docker run -d --restart=unless-stopped -p 80:80 -p 443:443 --privileged rancher/rancher:latest&lt;/code>&lt;/li>
+&lt;/ol>
+&lt;p>Esperamos, un tiempo y podremos acceder al panel de rancher por primera vez:
+&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/rancher-setup.png" data-size="890x815">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/rancher-setup_hu64f117aa05da2354fa7e3699417ce779_56588_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/rancher-setup_hu64f117aa05da2354fa7e3699417ce779_56588_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/rancher-setup.png" width="890" height="815" loading="lazy"
+alt="Rancher setup">
+&lt;/a>
+&lt;figcaption>Rancher setup&lt;/figcaption>
+&lt;/figure>&lt;/p>
+&lt;p>Una vez terminada la configuración inicial, veremos el listado de todos los clústers de K8s administrados desde rancher, en este momento, sólo veremos uno &lt;em>local&lt;/em>, que es el propio clúster de Rancher. Nuestra siguiente tarea será crear un clúster de Kubernetes para las dos máquinas nuevas que hemos creado:&lt;/p>
+&lt;h3 id="creando-un-nuevo-clúster-de-kubernetes">Creando un nuevo clúster de Kubernetes.&lt;/h3>
+&lt;p>Desde la interfaz de rancher, hacemos click sobre &lt;strong>Add cluster&lt;/strong>, y veremos la siguiente interfaz:
+&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/new-cluster.png" data-size="1577x913">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/new-cluster_hu8790b239e5a342f0a339c0cb9ff2a4c4_55338_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/new-cluster_hu8790b239e5a342f0a339c0cb9ff2a4c4_55338_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/new-cluster.png" width="1577" height="913" loading="lazy"
+alt="Nuevo clúster">
+&lt;/a>
+&lt;figcaption>Nuevo clúster&lt;/figcaption>
+&lt;/figure>
+En mi caso, voy a lanzar un nuevo clúster en &lt;em>Existing nodes&lt;/em>, pero si nuestra infraestructura está desplegada en otro proveedor, podemos también desplegarla fácilmente desde rancher. En mi clúster, he añadido la siguiente configuración:&lt;/p>
+&lt;ul>
+&lt;li>**Nombre: ** my-kube&lt;/li>
+&lt;li>**Network provider: **: calico&lt;/li>
+&lt;/ul>
+&lt;p>Una vez rellenada esta configuración, nos mostrará una pantalla con un comando que debemos ejecutar en las máquinas que queremos que formen parte del clúster. En un entorno de producción es recomendable instalar etcd, controlplane y worker por separado. Para mi caso particular, que es un entorno &amp;ldquo;para mi&amp;rdquo;, voy a instalar etcd, controlplane y worker en la misma máquina:&lt;/p>
+&lt;pre>&lt;code>sudo apt update
+sudo apt install docker.io
+sudo docker run -d --privileged --restart=unless-stopped --net=host -v /etc/kubernetes:/etc/kubernetes -v /var/run:/var/run rancher/rancher-agent:v2.5.5 --server https://10.10.10.5 --token xxxxx --ca-checksum xxxxx --etcd --controlplane --worker
+&lt;/code>&lt;/pre>
+&lt;p>A medida que ejecutamos este comando en todas las máquinas, veremos como nuestros nodos pasarán a formar parte del nuevo clúster de Kubernetes que hemos creado:
+&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/rancher-one-node.png" data-size="1910x352">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/rancher-one-node_hubb04ec1a2d5570d1f44bba2e911fa881_33217_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/rancher-one-node_hubb04ec1a2d5570d1f44bba2e911fa881_33217_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/rancher-one-node.png" width="1910" height="352" loading="lazy"
+alt="Nuevo clúster">
+&lt;/a>
+&lt;figcaption>Nuevo clúster&lt;/figcaption>
+&lt;/figure>&lt;/p>
+&lt;p>En este punto, nos toca tener paciencia y esperar a que los nodos terminen de desplegarse&amp;hellip; Cuando terminen de desplegarse, veremos lo siguiente:
+&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/nodes-full.png" data-size="541x365">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/nodes-full_hu159f53746b901ddeaf47948e114f4ae1_19966_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/nodes-full_hu159f53746b901ddeaf47948e114f4ae1_19966_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/nodes-full.png" width="541" height="365" loading="lazy"
+alt="Nuevo clúster">
+&lt;/a>
+&lt;figcaption>Nuevo clúster&lt;/figcaption>
+&lt;/figure>&lt;/p>
+&lt;h3 id="primeras-configuraciones">Primeras configuraciones&lt;/h3>
+&lt;ol>
+&lt;li>Creamos un nuevo proyecto dónde desplegaremos las aplicaciones de josecarlos.me, tungsteno.app y demo.tungsteno.app
+&lt;ol>
+&lt;li>Buscamos en el menú &lt;code>Project/Namespaces&lt;/code>&lt;/li>
+&lt;li>Le damos a &lt;code>Add project&lt;/code>&lt;/li>
+&lt;li>Creamos un nuevo proyecto, y accedemos al administrador del proyecto.&lt;/li>
+&lt;/ol>
+&lt;/li>
+&lt;/ol>
+&lt;h3 id="desplegando-mis-aplicaciones">Desplegando mis aplicaciones&lt;/h3>
+&lt;p>En primer lugar, vamos a desplegar josecarlos.me. Accedemos a &lt;em>workloads&lt;/em>, veremos la siguiente interfaz:
+&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/workloads.png" data-size="1890x275">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/workloads_hu18efcce590ec91e37ae54836ca996272_20671_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/workloads_hu18efcce590ec91e37ae54836ca996272_20671_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/workloads.png" width="1890" height="275" loading="lazy"
+alt="Nuevo clúster">
+&lt;/a>
+&lt;figcaption>Nuevo clúster&lt;/figcaption>
+&lt;/figure>&lt;/p>
+&lt;p>Hacemos click sobre &lt;strong>Deploy&lt;/strong>, y desplegamos el pod con la imagen Docker de nuestra aplicación:
+&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/hugo-deploy.png" data-size="1900x853">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/hugo-deploy_hu0eba43997d0f7a59e992adb6693a8038_65423_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/hugo-deploy_hu0eba43997d0f7a59e992adb6693a8038_65423_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/hugo-deploy.png" width="1900" height="853" loading="lazy"
+alt="Nuevo clúster">
+&lt;/a>
+&lt;figcaption>Nuevo clúster&lt;/figcaption>
+&lt;/figure>.&lt;/p>
+&lt;p>Configuramos un balanceador de carga para mandar josecarlos.me hacia el pod creado anteriormente. Entramos en primer lugar sobre &lt;em>load balancing&lt;/em>, seguidamente hacemos click sobre &lt;strong>Add ingress&lt;/strong>:&lt;/p>
+&lt;p>&lt;figure>
+&lt;a href="https://josecarlos.me/p/mi-nueva-infraestructura/josecarlos-ingress.png" data-size="1905x920">
+&lt;img srcset="https://josecarlos.me/p/mi-nueva-infraestructura/josecarlos-ingress_hufd0f34d862b9130692cad5fa6b894866_63207_480x0_resize_box_2.png 480w, https://josecarlos.me/p/mi-nueva-infraestructura/josecarlos-ingress_hufd0f34d862b9130692cad5fa6b894866_63207_1024x0_resize_box_2.png 1024w"
+src="https://josecarlos.me/p/mi-nueva-infraestructura/josecarlos-ingress.png" width="1905" height="920" loading="lazy"
+alt="Nuevo clúster">
+&lt;/a>
+&lt;figcaption>Nuevo clúster&lt;/figcaption>
+&lt;/figure>.&lt;/p>
+&lt;p>Repitiendo el proceso para tungsteno.app, habremos terminado.&lt;/p>
+&lt;h2 id="conclusiones">Conclusiones&lt;/h2></description></item><item><title>Varnish: ¿Cómo mantengo un sitio siempre online y evitos peticiones extras al backend?</title><link>https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/</link><pubDate>Sat, 10 Oct 2020 16:01:50 +0000</pubDate><guid>https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/</guid><description>&lt;img src="https://josecarlos.me/p/varnish-mostrar-la-cache-cuando-se-caiga-el-backend/covevr.jpeg" alt="Featured image of post Varnish: ¿Cómo mantengo un sitio siempre online y evitos peticiones extras al backend?" />&lt;h1 id="qué-es-varnish">¿Qué es Varnish?&lt;/h1>
 &lt;p>Varnish es un sistema de cache que se utiliza principalmente para cubrir las siguientes necesidades:&lt;/p>
 &lt;ol>
 &lt;li>&lt;strong>Cachear nuestros sitios webs para reducir la carga del backend.&lt;/strong>&lt;/li>
