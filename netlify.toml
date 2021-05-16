@@ -1,5 +1,5 @@
 [build]
-base = josecarlosme-blog/
+base = "josecarlosme-blog/"
 publish = "public"
 
 command = "hugo --gc --minify"
