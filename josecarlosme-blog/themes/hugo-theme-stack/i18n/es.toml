@@ -1,0 +1,26 @@
+[toggleMenu]
+    other = "Toggle Menu"
+
+[relatedContents]
+    other = "Contenido relacionado"
+
+[lastUpdatedOn]
+    other ="Última actualización"
+
+[widgetArchivesTitle]
+    other = "Archivos"
+
+[widgetSearchBox]
+    other = "Buscador"
+
+[widgetArchivesMore]
+    other = "Más"
+
+[widgetTagCloudTitle]
+    other = "Etiquetas"
+
+[notFoundTitle]
+    other = "No encontrado"
+
+[notFoundSubtitle]
+    other = "Esta página no existe"

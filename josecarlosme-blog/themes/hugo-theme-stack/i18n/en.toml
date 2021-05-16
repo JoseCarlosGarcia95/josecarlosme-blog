@@ -1,0 +1,26 @@
+[toggleMenu]
+    other = "Toggle Menu"
+
+[relatedContents]
+    other = "Related contents"
+
+[lastUpdatedOn]
+    other ="Last updated on"
+
+[widgetArchivesTitle]
+    other = "Archives"
+
+[widgetArchivesMore]
+    other = "More"
+
+[widgetSearchBox]
+    other = "Search box"
+
+[widgetTagCloudTitle]
+    other = "Tags"
+
+[notFoundTitle]
+    other = "Not Found"
+
+[notFoundSubtitle]
+    other = "This page does not exist."
